@@ -1,37 +1,6 @@
 Function Invoke-PSBackup {
     <#
-    .SYNOPSIS
-        Processes BackupJob files to perform backups using Robocopy.
-    .DESCRIPTION
-        Processes BackupJob files to perform backups using Robocopy.
-    .PARAMETER Path
-        Path and file name of the configuration file that will be used to drive the script.
-        The file is required to be a PSD1 with specific properties inside that the script
-        knows how to handle.
-    .EXAMPLE
-        PS C:\> .\PSBackup.ps1 -Path Backup.config.psd1
-
-        This example will run the PSBackup.ps1 script using a configuration file named Backup.config.psd1.
-        The script will run using the data in the configuration file to run it's backup jobs.
-    .INPUTS
-        Does not accept any input from the pipeline
-    .OUTPUTS
-        Does not output anything to the pipeline
-    .NOTES
-        PSD1 File Format
-
-        Copy the following and paste into a new file with an extension of '.psd1' then edit the properties to your liking.
-        BackupName is the BackupJob name that you give. It can be any name you wish.
-        You can have multiple BackupJobs described but the BackupJob name all need to be unique.
-
-        @{
-            BackupName = @{
-                Source = 'C:\path\to\source'
-                Destination = '\\server\path\to\destination'
-                Parameters = '/MIR /V /FP /NP /NDL /BYTES /R:1 /W:1'
-                LogPath = '\\path\to\log'
-            }
-        }
+    .EXTERNALHELP PSBackup-help.xml
     #>
     [CmdletBinding(SupportsShouldProcess)]
     Param(

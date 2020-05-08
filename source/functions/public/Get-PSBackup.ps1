@@ -1,24 +1,6 @@
 Function Get-PSBackup {
     <#
-    .SYNOPSIS
-    Lists BackupJobs from a BackupJob file.
-
-    .DESCRIPTION
-    Lists BackupJobs from a BackupJob file.
-
-    .PARAMETER Path
-    Path and Name of the Powershell Data file to process.
-
-    .EXAMPLE
-    PS C:\> Get-PSBackup -Path 'Backupfile.psd1'
-
-    This example processes a file named Backupfile.psd1 and outputs the BackupJob data to the console.
-
-    .INPUTS
-    System.String
-
-    .OUTPUTS
-    BackupJob
+    .EXTERNALHELP PSBackup-help.xml
     #>
     [CmdletBinding()]
     Param(

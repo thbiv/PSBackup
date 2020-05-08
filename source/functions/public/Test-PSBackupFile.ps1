@@ -1,20 +1,6 @@
 Function Test-PSBackupFile {
     <#
-    .SYNOPSIS
-    Tests a PSD1 file against a BackupJob File 'Schema'
-
-    .DESCRIPTION
-    This is my attempt at checking the syntax of the PSD1 file and making sure it is a valid BackupJob file.
-    This function will output True or False.
-    This is a work in progress.
-
-    .PARAMETER Path
-    The path for the PSD1 file to validate.
-
-    .EXAMPLE
-    PS C:\> Test-PSBackupFile -Path BackupJobs.psd1
-
-    This example will check the BsackupJobs.psd1 for validation against the BackupJob File Schema.
+    .EXTERNALHELP PSBackup-help.xml
     #>
     [CmdletBinding()]
     [OutputType([System.Boolean])]
