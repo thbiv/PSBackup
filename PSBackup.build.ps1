@@ -8,6 +8,13 @@ $Script:FileHashRoot = "$BuildRoot\_filehash"
 $Script:Source_PSD1 = "$SourceRoot\$ModuleName.psd1"
 $Script:Dest_PSD1 = "$OutputRoot\$ModuleName\$ModuleName.psd1"
 $Script:Dest_PSM1 = "$OutputRoot\$ModuleName\$ModuleName.psm1"
+$Script:Header = @"
+<style>
+TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
+TH {border-width: 1px; padding: 3px; border-style: solid; border-color: black; background-color: #6495ED;}
+TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
+</style>
+"@
 
 # Synopsis: Empty the _output and _testresults folders
 Task CleanAndPrep {
@@ -77,22 +84,23 @@ Task Build CompileModuleFile, CompileManifestFile, CompileFormats, CompileHelp
 # Synopsis: Test the Project
 Task Test {
     $PesterBasic = @{
-        OutputFile = "$TestResultsRoot\BasicModuleTestResults.xml"
-        OutputFormat = 'NUnitXml'
         Script = @{Path="$TestsRoot\BasicModule.tests.ps1";Parameters=@{Path=$OutputRoot;ProjectName=$ModuleName}}
+        PassThru = $True
     }
-    $BasicResults = Invoke-Pester @PesterBasic -PassThru
+    $Results = Invoke-Pester @PesterBasic
+    $Manifest = Import-PowerShellDataFile -Path "$SourceRoot\$ModuleName.psd1"
+    $FileName = "Results_{0}_{1}" -f $ModuleName, $($Manifest.ModuleVersion)
+    $Results | Export-Clixml -Path "$TestResultsRoot\$FileName.xml"
     Write-Host "Processing Pester Results"
-    $FPesterParams = @{
-        PesterResult = @($BasicResults)
-        Path = "$TestResultsRoot"
-        Format = 'HTML'
-        Include = 'Passed','Failed'
-        BaseFileName = "PesterResults_$ModuleName"
-        ReportTitle = "Pester Results - $ModuleName"
-    }
-    Format-Pester @FPesterParams
-    If ($BasicResults.FailedCount -ne 0) {Throw "One or more Basic Module Tests Failed"}
+    $PreContent = @()
+    $PreContent += "Total Count: $($Results.TotalCount)"
+    $PreContent += "Passed Count: $($Results.PassedCount)"
+    $PreContent += "Failed Count: $($Results.FailedCount)"
+    $PreContent += "Duration: $($Results.Time)"
+    
+    $HTML = $($Results.TestResult | ConvertTo-Html -Property Describe,Context,Name,Result,Time,FailureMessage,StackTrace,ErrorRecord -Head $Header -PreContent $($PreContent -join '<BR>') | Out-String)
+    $HTML | Out-File -FilePath "$TestResultsRoot\$FileName.html"
+    If ($Results.FailedCount -ne 0) {Throw "One or more Basic Module Tests Failed"}
     Else {Write-Host "All tests have passed...Build can continue."}
 }
 
