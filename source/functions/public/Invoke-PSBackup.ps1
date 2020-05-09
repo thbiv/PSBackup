@@ -32,10 +32,18 @@ Function Invoke-PSBackup {
             [string]$ArgumentList = ('"{0}" "{1}" /LOG+:"{2}" {3}' -f $($BackupJob.Source), $($BackupJob.Destination), $LogFile, $($BackupJob.Parameters))
             If ($PSCmdlet.ShouldProcess("Copying '$($BackupJob.Source)' to '$($BackupJob.Destination)'")) {
                 Try {
+                    $Stopwatch =  [system.diagnostics.stopwatch]::StartNew()
                     Start-Process -FilePath robocopy.exe -ArgumentList $ArgumentList -NoNewWindow -Wait | Out-Null
+                    $Stopwatch.Stop()
                 } Catch {
                     $ErrorMessage = $_.Exception.Message
                     Write-Warning $ErrorMessage
+                }
+                Write-Output [ordered]@{
+                    Name = $($BackupJob.Name)
+                    Source = $($BackupJob.Source)
+                    Destination = $($BackupJob.Destination)
+                    TimeElapsed = $($Stopwatch.Elapsed)
                 }
             }
         }
