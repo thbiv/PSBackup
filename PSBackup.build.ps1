@@ -74,8 +74,10 @@ Task CompileHelp {
     If (Test-Path -Path $DocsRoot) {
         Write-Host 'Creating External Help'
         New-ExternalHelp -Path $DocsRoot -OutputPath "$OutputRoot\$ModuleName" -Force
-        Write-Host 'Creating About Help file(s)'
-        New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force
+        If (Test-Path -Path "$DocsRoot\about_help") {
+            Write-Host 'Creating About Help file(s)'
+            New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force
+        }
     }
 }
 
@@ -106,7 +108,7 @@ Task Test {
 
 # Synopsis: Produce File Hash for all output files
 Task Hash {
-    $Manifest = Import-PowerShellDataFile -Path "$SourceRoot\$ModuleName.psd1"
+    $Manifest = Import-PowerShellDataFile -Path $Dest_PSD1
     $Files = Get-ChildItem -Path "$OutputRoot\$ModuleName" -File -Recurse
     $HashOutput = @()
     ForEach ($File in $Files) {
@@ -117,9 +119,21 @@ Task Hash {
 }
 
 # Synopsis: Publish to repository
-Task Deploy {
-    Invoke-PSDeploy -Force -Verbose
+Task PublishModule {
+    Write-Host "Publishing Module to 'PSLocalGallery'"
+    $Params = @{
+        Path = "$OutputRoot\$ModuleName"
+        Repository = 'PSLocalGallery'
+        Force = $True
+    }
+    Publish-Module @Params
 }
+
+Task PublishOnlineHelp {
+
+}
+
+Task Deploy PublishModule, PublishOnlineHelp
 
 Task . CleanAndPrep, Build, Test, Hash, Deploy
 Task Testing CleanAndPrep, Build, Test
