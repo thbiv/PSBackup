@@ -1,3 +1,8 @@
+Param (
+    [switch]$BumpMajorVersion,
+    [switch]$BumpMinorVersion
+)
+
 $Script:ModuleName = Split-Path -Path $PSScriptRoot -Leaf
 $Script:SourceRoot = "$BuildRoot\source"
 $Script:DocsRoot = "$BuildRoot\docs"
@@ -8,6 +13,7 @@ $Script:FileHashRoot = "$BuildRoot\_filehash"
 $Script:Source_PSD1 = "$SourceRoot\$ModuleName.psd1"
 $Script:Dest_PSD1 = "$OutputRoot\$ModuleName\$ModuleName.psd1"
 $Script:Dest_PSM1 = "$OutputRoot\$ModuleName\$ModuleName.psm1"
+$Script:ModuleConfig = [xml]$(Get-Content -Path '.\Module.Config.xml')
 $Script:Header = @"
 <style>
 TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
@@ -28,6 +34,11 @@ Task CleanAndPrep {
         Get-ChildItem -Path $TestResultsRoot -Recurse | Remove-Item -Force -Recurse
     } Else {
         New-Item -Path $TestResultsRoot -ItemType Directory -Force | Out-Null
+    }
+    If (Test-Path -Path $FileHashRoot) {
+        Get-ChildItem -Path $FileHashRoot -Recurse | Remove-Item -Force -Recurse
+    } Else {
+        New-Item -Path $FileHashRoot -ItemType Directory -Force | Out-Null
     }
 }
 
@@ -57,8 +68,29 @@ Task CompileModuleFile {
 
 # Synopsis: Compile the manifest file (PSD1)
 Task CompileManifestFile {
-    Write-Host "Copying Module Manifest"
-    Copy-Item -Path $Source_PSD1 -Destination $Dest_PSD1
+    $Version = [version]$($ModuleConfig.config.manifest.moduleversion)
+    If ($BumpMajorVersion) {$MajorVersion = $($Version.Major + 1)}
+    Else {$MajorVersion = $($Version.Major)}
+    If ($BumpMinorVersion) {$MinorVersion = $($Version.Minor + 1)}
+    Else {$MinorVersion = $($Version.Minor)}
+    $NewVersion = "{0}.{1}.{2}" -f $MajorVersion,$MinorVersion,$($Version.Build + 1)
+    $Params = @{
+        Path = $Dest_PSD1
+        RootModule = "$ModuleName.psm1"
+        GUID = $($ModuleConfig.config.manifest.guid)
+        ModuleVersion = $NewVersion
+        Author = $($ModuleConfig.config.manifest.author)
+        Description = $($ModuleConfig.config.manifest.description)
+        Copyright = $($ModuleConfig.config.manifest.copyright)
+        CompanyName = $($ModuleConfig.config.manifest.companyName)
+        FunctionsToExport = $(((Get-ChildItem -Path "$SourceRoot\functions\public").basename))
+        CmdletsToExport = @()
+        AliasesToExport = @()
+        VariablesToExport = @()
+    }
+    New-ModuleManifest @Params
+    $ModuleConfig.config.manifest.moduleversion = $NewVersion
+    $ModuleConfig.Save('Module.Config.xml')
 }
 
 # Synopsis: Compile/Copy formats file (PS1XML)
@@ -73,10 +105,10 @@ Task CompileFormats {
 Task CompileHelp {
     If (Test-Path -Path $DocsRoot) {
         Write-Host 'Creating External Help'
-        New-ExternalHelp -Path $DocsRoot -OutputPath "$OutputRoot\$ModuleName" -Force
+        New-ExternalHelp -Path $DocsRoot -OutputPath "$OutputRoot\$ModuleName" -Force | Out-Null
         If (Test-Path -Path "$DocsRoot\about_help") {
             Write-Host 'Creating About Help file(s)'
-            New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force
+            New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force | Out-Null
         }
     }
 }
@@ -90,7 +122,7 @@ Task Test {
         PassThru = $True
     }
     $Results = Invoke-Pester @PesterBasic
-    $Manifest = Import-PowerShellDataFile -Path "$SourceRoot\$ModuleName.psd1"
+    $Manifest = Import-PowerShellDataFile -Path $Dest_PSD1
     $FileName = "Results_{0}_{1}" -f $ModuleName, $($Manifest.ModuleVersion)
     $Results | Export-Clixml -Path "$TestResultsRoot\$FileName.xml"
     Write-Host "Processing Pester Results"
@@ -103,7 +135,13 @@ Task Test {
     $HTML = $($Results.TestResult | ConvertTo-Html -Property Describe,Context,Name,Result,Time,FailureMessage,StackTrace,ErrorRecord -Head $Header -PreContent $($PreContent -join '<BR>') | Out-String)
     $HTML | Out-File -FilePath "$TestResultsRoot\$FileName.html"
     If ($Results.FailedCount -ne 0) {Throw "One or more Basic Module Tests Failed"}
-    Else {Write-Host "All tests have passed...Build can continue."}
+    Else {Write-Host "All tests have passed."}
+}
+
+Task SaveResults {
+    Write-Host "Copying Test Results"
+    Copy-Item -Path "$TestResultsRoot\*.xml" -Destination "$Home\Documents\TestResults\$ModuleName\XML" -Force | Out-Null
+    Copy-Item -Path "$TestResultsRoot\*.html" -Destination "$Home\Documents\TestResults\$ModuleName\HTML" -Force | Out-Null
 }
 
 # Synopsis: Produce File Hash for all output files
@@ -118,12 +156,18 @@ Task Hash {
     $HashOutput | Export-Clixml -Path "$FileHashRoot\$HashExportFile"
 }
 
+Task SaveHash {
+    Write-Host "Copying FileHash data"
+    Copy-Item -Path $FileHashRoot -Destination "$Home\Documents\FileHashData\$ModuleName" -Force | Out-Null
+}
+
 # Synopsis: Publish to repository
 Task PublishModule {
-    Write-Host "Publishing Module to 'PSLocalGallery'"
+    $Repository = $ModuleConfig.config.deployment.repository
+    Write-Host "Publishing Module to $Repository"
     $Params = @{
         Path = "$OutputRoot\$ModuleName"
-        Repository = 'PSLocalGallery'
+        Repository = $Repository
         Force = $True
     }
     Publish-Module @Params
@@ -135,5 +179,5 @@ Task PublishOnlineHelp {
 
 Task Deploy PublishModule, PublishOnlineHelp
 
-Task . CleanAndPrep, Build, Test, Hash, Deploy
-Task Testing CleanAndPrep, Build, Test
+Task . CleanAndPrep, Build, Test, SaveResults, Hash, SaveHash, Deploy
+Task Testing CleanAndPrep, Build, Test, SaveResults

@@ -48,52 +48,6 @@
         "kind": "test",
         "isDefault": true
       }
-    },
-    {
-      "label": "Clean",
-      "type": "shell",
-      "problemMatcher": [
-        "$msCompile"
-      ],
-      "command": "Invoke-Build -Task Clean"
-    },
-    {
-      "label": "Build",
-      "type": "shell",
-      "problemMatcher": [
-        "$msCompile"
-      ],
-      "command": "Invoke-Build -Task Build"
-    },
-    {
-      "label": "Test",
-      "type": "shell",
-      "problemMatcher": [
-        "$msCompile"
-      ],
-      "command": "Invoke-Build -Task Test"
-    },
-    {
-      "label": "Hash",
-      "type": "shell",
-      "problemMatcher": [
-        "$msCompile"
-      ],
-      "command": "Invoke-Build -Task Hash"
-    },
-    {
-      "label": "Deploy",
-      "type": "shell",
-      "problemMatcher": [
-        "$msCompile"
-      ],
-      "command": "Invoke-Build -Task Deploy"
-    },
-    {
-      "label": "?",
-      "type": "shell",
-      "problemMatcher": [],
-      "command": "Invoke-Build -Task ?"
     }
   ]
 }
