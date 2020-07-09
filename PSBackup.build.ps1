@@ -104,6 +104,7 @@ Task CompileManifestFile {
         $Params.Add('FormatsToProcess',$(((Get-ChildItem -Path "$SourceRoot\formats").Name)))
     }
     New-ModuleManifest @Params
+    $Content = Get-Content -Path $Dest_PSD1
     $Content | ForEach-Object {$_.TrimEnd()} | Set-Content -Path $Dest_PSD1 -Force
     $ModuleConfig.config.manifest.moduleversion = $NewVersion
     $ModuleConfig.Save('Module.Config.xml')
