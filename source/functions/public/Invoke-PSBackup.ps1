@@ -39,12 +39,13 @@ Function Invoke-PSBackup {
                     $ErrorMessage = $_.Exception.Message
                     Write-Warning $ErrorMessage
                 }
-                Write-Output [ordered]@{
+                $Output = [ordered]@{
                     Name = $($BackupJob.Name)
                     Source = $($BackupJob.Source)
                     Destination = $($BackupJob.Destination)
                     TimeElapsed = $($Stopwatch.Elapsed)
                 }
+                Write-Output $(New-Object -TypeName PSObject -Property $Output)
             }
         }
     }
