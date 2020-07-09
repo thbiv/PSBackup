@@ -10,7 +10,6 @@ $Script:OutputRoot = "$BuildRoot\_output"
 $Script:TestResultsRoot = "$BuildRoot\_testresults"
 $Script:TestsRoot = "$BuildRoot\tests"
 $Script:FileHashRoot = "$BuildRoot\_filehash"
-$Script:Source_PSD1 = "$SourceRoot\$ModuleName.psd1"
 $Script:Dest_PSD1 = "$OutputRoot\$ModuleName\$ModuleName.psd1"
 $Script:Dest_PSM1 = "$OutputRoot\$ModuleName\$ModuleName.psm1"
 $Script:ModuleConfig = [xml]$(Get-Content -Path '.\Module.Config.xml')
@@ -74,6 +73,19 @@ Task CompileManifestFile {
     If ($BumpMinorVersion) {$MinorVersion = $($Version.Minor + 1)}
     Else {$MinorVersion = $($Version.Minor)}
     $NewVersion = "{0}.{1}.{2}" -f $MajorVersion,$MinorVersion,$($Version.Build + 1)
+
+    # Find Aliases to Export
+    $Code = Get-Content ".\_output\$ModuleName\$ModuleName.psm1" -Raw
+    $Tokens = [System.Management.Automation.PSParser]::Tokenize($code,[ref]$null)
+    $SetAlias = $Tokens | Where-Object {($_.Type -eq 'Command') -and ($_.Content -eq 'Set-Alias') -and ($_.StartColumn -eq 1)}
+    $ExportAlias = @()
+    ForEach ($Item in $SetAlias) {
+        $Line = $Tokens | Where-Object {$_.StartLine -eq $($Item.StartLine)}
+        $NameEnd = ($Line | Where-Object {($_.Type -eq 'CommandParameter') -and ($_.Content -eq '-Name')}).EndCOlumn
+        $Content = ($Line | Where-Object {($_.Type -eq 'CommandArgument') -and ($_.StartColumn -eq $($NameEnd + 1))}).Content
+        $ExportAlias += $Content
+    }
+
     $Params = @{
         Path = $Dest_PSD1
         RootModule = "$ModuleName.psm1"
@@ -85,10 +97,14 @@ Task CompileManifestFile {
         CompanyName = $($ModuleConfig.config.manifest.companyName)
         FunctionsToExport = $(((Get-ChildItem -Path "$SourceRoot\functions\public").basename))
         CmdletsToExport = @()
-        AliasesToExport = @()
+        AliasesToExport = $ExportAlias
         VariablesToExport = @()
     }
+    If (Test-Path -Path "$SourceRoot\formats") {
+        $Params.Add('FormatsToProcess',$(((Get-ChildItem -Path "$SourceRoot\formats").Name)))
+    }
     New-ModuleManifest @Params
+    $Content | ForEach-Object {$_.TrimEnd()} | Set-Content -Path $Dest_PSD1 -Force
     $ModuleConfig.config.manifest.moduleversion = $NewVersion
     $ModuleConfig.Save('Module.Config.xml')
 }

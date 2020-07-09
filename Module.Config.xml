@@ -7,7 +7,7 @@
   <manifest>
     <guid>e31cb1dc-68b8-4878-bfe8-aca426872a02</guid>
     <author>Thomas Barratt</author>
-    <moduleversion>0.1.8</moduleversion>
+    <moduleversion>0.1.10</moduleversion>
     <description>Module for backing up data as backup jobs</description>
     <copyright>2018-2020</copyright>
     <companyname>THBIV</companyname>

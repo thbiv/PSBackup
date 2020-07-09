@@ -1,16 +1,17 @@
 [CmdletBinding()]
 Param (
+    [Parameter(Mandatory=$False,Position=0)]
     [ValidateSet('.','Testing')]
     [string]$BuildTask = '.',
-
     [switch]$BumpMajorVersion,
-
     [switch]$BumpMinorVersion
 )
 
+Write-Host "Bootstrap Environment"
 If (-not(Get-PackageProvider -Name Nuget)) {
     Install-PackageProvider -Name Nuget -Force -Scope CurrentUser
-}
+    Write-Host "Installed Nuget package provider"
+} Else {Write-Host "Nuget package provider already installed"}
 
 [xml]$ModuleConfig = Get-Content Module.Config.xml
 $RequiredModules = $ModuleConfig.requires.modules.module
@@ -32,6 +33,7 @@ ForEach ($Module in $RequiredModules) {
 
 $Params = @{
     Task = $BuildTask
+    File = 'PSbackup.build.ps1'
 }
 If ($BumpMajorVersion) {
     $Params.Add('BumpMajorVersion',$True)
