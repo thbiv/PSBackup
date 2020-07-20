@@ -94,7 +94,10 @@ Task CompileManifestFile {
         Author = $($ModuleConfig.config.manifest.author)
         Description = $($ModuleConfig.config.manifest.description)
         Copyright = $($ModuleConfig.config.manifest.copyright)
-        CompanyName = $($ModuleConfig.config.manifest.companyName)
+        ProjectUri = $($ModuleConfig.config.manifest.projecturi)
+        LicenseUri = $($ModuleConfig.config.manifest.licenseuri)
+        ReleaseNotes = $($ModuleConfig.config.manifest.releasenotes)
+        Tags = $($($ModuleConfig.config.manifest.tags).split(','))
         FunctionsToExport = $(((Get-ChildItem -Path "$SourceRoot\functions\public").basename))
         CmdletsToExport = @()
         AliasesToExport = $ExportAlias
@@ -127,6 +130,10 @@ Task CompileHelp {
             Write-Host 'Creating About Help file(s)'
             New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force | Out-Null
         }
+    }
+    If (Test-Path -Path "$BuildRoot\LICENSE") {
+        Write-Host 'Adding license file'
+        Copy-Item -Path "$BuildRoot\LICENSE" -Destination "$OutputRoot\$ModuleName\LICENSE"
     }
 }
 
@@ -180,21 +187,20 @@ Task SaveHash {
 
 # Synopsis: Publish to repository
 Task PublishModule {
+    $SecureString = Get-Content -Path "$HOME\Documents\NugetAPIKey.txt" | ConvertTo-SecureString
+    $ApiKey = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((($SecureString))))
     $Repository = $ModuleConfig.config.deployment.repository
     Write-Host "Publishing Module to $Repository"
     $Params = @{
         Path = "$OutputRoot\$ModuleName"
         Repository = $Repository
+        NuGetApiKey = $ApiKey
         Force = $True
     }
     Publish-Module @Params
 }
 
-Task PublishOnlineHelp {
-
-}
-
-Task Deploy PublishModule, PublishOnlineHelp
+Task Deploy PublishModule
 
 Task . CleanAndPrep, Build, Test, SaveResults, Hash, SaveHash, Deploy
 Task Testing CleanAndPrep, Build, Test, SaveResults

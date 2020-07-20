@@ -1,16 +1,19 @@
 <config>
   <deployment>
-    <repository>PSLocalGallery</repository>
+    <repository>PSGallery</repository>
     <onlinehelp>
     </onlinehelp>
   </deployment>
   <manifest>
     <guid>e31cb1dc-68b8-4878-bfe8-aca426872a02</guid>
     <author>Thomas Barratt</author>
-    <moduleversion>0.1.13</moduleversion>
-    <description>Module for backing up data as backup jobs</description>
-    <copyright>2018-2020</copyright>
-    <companyname>THBIV</companyname>
+    <moduleversion>0.1.15</moduleversion>
+    <description>Module for running backup jobs described in PSD1 files</description>
+    <copyright>2018-2020 Thomas Barratt</copyright>
+    <licenseuri>https://github.com/thbiv/PSBackup/blob/master/LICENSE</licenseuri>
+    <projecturi>https://github.com/thbiv/PSBackup</projecturi>
+    <releasenotes>https://github.com/thbiv/PSBackup/blob/master/Release-Notes.md</releasenotes>
+    <tags>PSBackup,backup,robocopy,Windows</tags>
   </manifest>
   <requiredmodules>
     <module name="InvokeBuild" Repository="PSGallery" />
