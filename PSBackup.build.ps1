@@ -1,8 +1,3 @@
-Param (
-    [switch]$BumpMajorVersion,
-    [switch]$BumpMinorVersion
-)
-
 $Script:ModuleName = Split-Path -Path $PSScriptRoot -Leaf
 $Script:SourceRoot = "$BuildRoot\source"
 $Script:DocsRoot = "$BuildRoot\docs"
@@ -13,13 +8,6 @@ $Script:FileHashRoot = "$BuildRoot\_filehash"
 $Script:Dest_PSD1 = "$OutputRoot\$ModuleName\$ModuleName.psd1"
 $Script:Dest_PSM1 = "$OutputRoot\$ModuleName\$ModuleName.psm1"
 $Script:ModuleConfig = [xml]$(Get-Content -Path '.\Module.Config.xml')
-$Script:Header = @"
-<style>
-TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
-TH {border-width: 1px; padding: 3px; border-style: solid; border-color: black; background-color: #6495ED;}
-TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
-</style>
-"@
 
 # Synopsis: Empty the _output and _testresults folders
 Task CleanAndPrep {
@@ -67,13 +55,6 @@ Task CompileModuleFile {
 
 # Synopsis: Compile the manifest file (PSD1)
 Task CompileManifestFile {
-    $Version = [version]$($ModuleConfig.config.manifest.moduleversion)
-    If ($BumpMajorVersion) {$MajorVersion = $($Version.Major + 1)}
-    Else {$MajorVersion = $($Version.Major)}
-    If ($BumpMinorVersion) {$MinorVersion = $($Version.Minor + 1)}
-    Else {$MinorVersion = $($Version.Minor)}
-    $NewVersion = "{0}.{1}.{2}" -f $MajorVersion,$MinorVersion,$($Version.Build + 1)
-
     # Find Aliases to Export
     $Code = Get-Content ".\_output\$ModuleName\$ModuleName.psm1" -Raw
     $Tokens = [System.Management.Automation.PSParser]::Tokenize($code,[ref]$null)
@@ -90,7 +71,7 @@ Task CompileManifestFile {
         Path = $Dest_PSD1
         RootModule = "$ModuleName.psm1"
         GUID = $($ModuleConfig.config.manifest.guid)
-        ModuleVersion = $NewVersion
+        ModuleVersion = [version]$($ModuleConfig.config.manifest.moduleversion)
         Author = $($ModuleConfig.config.manifest.author)
         Description = $($ModuleConfig.config.manifest.description)
         Copyright = $($ModuleConfig.config.manifest.copyright)
@@ -137,70 +118,90 @@ Task CompileHelp {
     }
 }
 
-Task Build CompileModuleFile, CompileManifestFile, CompileFormats, CompileHelp
+# Synopsis: Copy LICENSE file to the module folder
+Task CopyLicense {
+    If (Test-Path -Path "$BuildRoot\LICENSE") {
+        Write-Host 'Adding license file'
+        Copy-Item -Path "$BuildRoot\LICENSE" -Destination "$OutputRoot\$ModuleName\LICENSE"
+    }
+}
+
+Task Build CompileModuleFile, CompileManifestFile, CompileFormats, CompileHelp, CopyLicense
 
 # Synopsis: Test the Project
-Task Test {
+Task PesterTest {
     $PesterBasic = @{
         Script = @{Path="$TestsRoot\BasicModule.tests.ps1";Parameters=@{Path=$OutputRoot;ProjectName=$ModuleName}}
         PassThru = $True
     }
-    $Results = Invoke-Pester @PesterBasic
-    $Manifest = Import-PowerShellDataFile -Path $Dest_PSD1
-    $FileName = "Results_{0}_{1}" -f $ModuleName, $($Manifest.ModuleVersion)
-    $Results | Export-Clixml -Path "$TestResultsRoot\$FileName.xml"
-    Write-Host "Processing Pester Results"
+    $Script:Results = Invoke-Pester @PesterBasic
+
+    If ($Results.FailedCount -ne 0) {Throw "One or more Basic Module Tests Failed"}
+    Else {Write-Host "All tests have passed."}
+}
+
+Task ConvertTestResultsToHTML {
+    $Script:Header = @"
+<style>
+TABLE {border-width: 1px; border-style: solid; border-color: black; border-collapse: collapse;}
+TH {border-width: 1px; padding: 3px; border-style: solid; border-color: black; background-color: #6495ED;}
+TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
+</style>
+"@
     $PreContent = @()
     $PreContent += "Total Count: $($Results.TotalCount)"
     $PreContent += "Passed Count: $($Results.PassedCount)"
     $PreContent += "Failed Count: $($Results.FailedCount)"
     $PreContent += "Duration: $($Results.Time)"
     
+    $FileName = 'Pester-Test-Results'
     $HTML = $($Results.TestResult | ConvertTo-Html -Property Describe,Context,Name,Result,Time,FailureMessage,StackTrace,ErrorRecord -Head $Header -PreContent $($PreContent -join '<BR>') | Out-String)
     $HTML | Out-File -FilePath "$TestResultsRoot\$FileName.html"
-    If ($Results.FailedCount -ne 0) {Throw "One or more Basic Module Tests Failed"}
-    Else {Write-Host "All tests have passed."}
 }
 
-Task SaveResults {
-    Write-Host "Copying Test Results"
-    Copy-Item -Path "$TestResultsRoot\*.xml" -Destination "$Home\Documents\TestResults\$ModuleName\XML" -Force | Out-Null
-    Copy-Item -Path "$TestResultsRoot\*.html" -Destination "$Home\Documents\TestResults\$ModuleName\HTML" -Force | Out-Null
+Task Test PesterTest, ConvertTestResultsToHTML
+
+# Synopsis: Get Release Notes
+Task GetReleaseNotes {
+    $ChangeLog = Get-ChangelogData
+    $EmptyChangeLog = $True
+    $ReleaseNotes = ForEach ($Property in $ChangeLog.Unreleased[0].Data.PSObject.Properties.Name) {
+        $Data = $ChangeLog.Unreleased[0].Data.$Property
+        If ($Data) {
+            $EmptyChangeLog = $False
+            Write-Output $Property
+            ForEach ($Item in $Data) {
+                Write-Output ("- {0}" -f $Item)
+            }
+        }
+    }
+    If ($EmptyChangeLog -eq $True -Or $ReleaseNotes.Count -eq 0) {
+        $ReleaseNotes = "None"
+    }
+    Write-Output "Release notes:"
+    Write-Output $ReleaseNotes
+    Set-Content -Value $ReleaseNotes -Path $OutputRoot\Release-Notes.txt -Force
+}
+
+# Synopsis: Move unlreleased changes to a release version
+Task UpdateChangeLog {
+    $Params = @{
+        ReleaseVersion = $($ModuleConfig.config.manifest.moduleversion)
+        LinkMode = 'None'
+    }
+    Update-Changelog @Params
 }
 
 # Synopsis: Produce File Hash for all output files
 Task Hash {
-    $Manifest = Import-PowerShellDataFile -Path $Dest_PSD1
     $Files = Get-ChildItem -Path "$OutputRoot\$ModuleName" -File -Recurse
     $HashOutput = @()
     ForEach ($File in $Files) {
         $HashOutput += Get-FileHash -Path $File.fullname
     }
-    $HashExportFile = "ModuleFiles_Hash_$ModuleName.$($Manifest.ModuleVersion).xml"
+    $HashExportFile = "FileHash.xml"
     $HashOutput | Export-Clixml -Path "$FileHashRoot\$HashExportFile"
 }
 
-Task SaveHash {
-    Write-Host "Copying FileHash data"
-    Copy-Item -Path $FileHashRoot -Destination "$Home\Documents\FileHashData\$ModuleName" -Force | Out-Null
-}
-
-# Synopsis: Publish to repository
-Task PublishModule {
-    $SecureString = Get-Content -Path "$HOME\Documents\NugetAPIKey.txt" | ConvertTo-SecureString
-    $ApiKey = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR((($SecureString))))
-    $Repository = $ModuleConfig.config.deployment.repository
-    Write-Host "Publishing Module to $Repository"
-    $Params = @{
-        Path = "$OutputRoot\$ModuleName"
-        Repository = $Repository
-        NuGetApiKey = $ApiKey
-        Force = $True
-    }
-    Publish-Module @Params
-}
-
-Task Deploy PublishModule
-
-Task . CleanAndPrep, Build, Test, SaveResults, Hash, SaveHash, Deploy
-Task Testing CleanAndPrep, Build, Test, SaveResults
+Task . CleanAndPrep, Build, Test
+Task Release CleanAndPrep, Build, Test, GetReleaseNotes, UpdateChangeLog, Hash

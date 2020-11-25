@@ -1,9 +1,4 @@
 <config>
-  <deployment>
-    <repository>PSGallery</repository>
-    <onlinehelp>
-    </onlinehelp>
-  </deployment>
   <manifest>
     <guid>e31cb1dc-68b8-4878-bfe8-aca426872a02</guid>
     <author>Thomas Barratt</author>
@@ -12,14 +7,14 @@
     <copyright>2018-2020 Thomas Barratt</copyright>
     <licenseuri>https://github.com/thbiv/PSBackup/blob/master/LICENSE</licenseuri>
     <projecturi>https://github.com/thbiv/PSBackup</projecturi>
-    <releasenotes>https://github.com/thbiv/PSBackup/blob/master/Release-Notes.md</releasenotes>
+    <releasenotes>https://github.com/thbiv/PSBackup/blob/master/CHANGELOG.md</releasenotes>
     <tags>PSBackup,backup,robocopy,Windows</tags>
   </manifest>
   <requiredmodules>
-    <module name="InvokeBuild" Repository="PSGallery" />
-    <module name="Pester" Repository="PSGallery" RequiredVersion="4.10.1" />
-    <module name="PSScriptAnalyzer" Repository="PSGallery" />
-    <module name="PSProjects" Repository="PSLocalGallery" />
-    <module name="platyPS" Repository="PSGallery" />
+    <module name="InvokeBuild" />
+    <module name="Pester" RequiredVersion="4.10.1" />
+    <module name="PSScriptAnalyzer" />
+    <module name="ChangelogManagement" />
+    <module name="platyPS" />
   </requiredmodules>
 </config>
