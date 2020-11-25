@@ -186,7 +186,7 @@ Task GetReleaseNotes {
 # Synopsis: Move unlreleased changes to a release version
 Task UpdateChangeLog {
     $Params = @{
-        ReleaseVersion = $($ModuleConfig.config.manifest.moduleversion)
+        ReleaseVersion = $($env:ModuleVersion)
         LinkMode = 'None'
     }
     Update-Changelog @Params
