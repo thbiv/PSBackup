@@ -4,6 +4,7 @@
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/dt/PSBackup)
 ![PowerShell Gallery](https://img.shields.io/powershellgallery/p/PSBackup)
 
+![GitHub Workflow Status](https://img.shields.io/github/workflow/status/thbiv/PSBackup/Module-Build)
 ![GitHub](https://img.shields.io/github/license/thbiv/PSBackup)
 ![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/thbiv/PSBackup)
 
@@ -17,7 +18,7 @@
 -   [PSBackupFile](#PSBackupFile)
 -   [Usage](#Usage)
 -   [Licensing](#Licensing)
--   [Release Notes](#Release-Notes)
+-   [Change Log](#Change-Log)
 
 ---
 
@@ -138,6 +139,6 @@ PSBackup is licensed under the [MIT License](LICENSE)
 
 ---
 
-## Release Notes
+## Change Log
 
-Please refer to [Release Notes](Release-Notes.md)
+Please refer to [Change Log](CHANGELOG.md)
