@@ -90,8 +90,6 @@ Task CompileManifestFile {
     New-ModuleManifest @Params
     $Content = Get-Content -Path $Dest_PSD1
     $Content | ForEach-Object {$_.TrimEnd()} | Set-Content -Path $Dest_PSD1 -Force
-    $ModuleConfig.config.manifest.moduleversion = $NewVersion
-    $ModuleConfig.Save('Module.Config.xml')
 }
 
 # Synopsis: Compile/Copy formats file (PS1XML)
@@ -111,10 +109,6 @@ Task CompileHelp {
             Write-Host 'Creating About Help file(s)'
             New-ExternalHelp -Path "$DocsRoot\about_help" -OutputPath "$OutputRoot\$ModuleName\en-US" -Force | Out-Null
         }
-    }
-    If (Test-Path -Path "$BuildRoot\LICENSE") {
-        Write-Host 'Adding license file'
-        Copy-Item -Path "$BuildRoot\LICENSE" -Destination "$OutputRoot\$ModuleName\LICENSE"
     }
 }
 
